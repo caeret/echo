@@ -21,7 +21,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/labstack/gommon/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -1024,7 +1023,7 @@ func TestContext_Logger(t *testing.T) {
 	log1 := c.Logger()
 	assert.NotNil(t, log1)
 
-	log2 := log.New("echo2")
+	log2 := &SlogLogger{}
 	c.SetLogger(log2)
 	assert.Equal(t, log2, c.Logger())
 

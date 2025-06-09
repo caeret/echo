@@ -4,38 +4,74 @@
 package echo
 
 import (
-	"github.com/labstack/gommon/log"
-	"io"
+	"log"
+	"log/slog"
 )
 
 // Logger defines the logging interface.
 type Logger interface {
-	Output() io.Writer
-	SetOutput(w io.Writer)
-	Prefix() string
-	SetPrefix(p string)
-	Level() log.Lvl
-	SetLevel(v log.Lvl)
-	SetHeader(h string)
-	Print(i ...interface{})
-	Printf(format string, args ...interface{})
-	Printj(j log.JSON)
-	Debug(i ...interface{})
-	Debugf(format string, args ...interface{})
-	Debugj(j log.JSON)
-	Info(i ...interface{})
-	Infof(format string, args ...interface{})
-	Infoj(j log.JSON)
-	Warn(i ...interface{})
-	Warnf(format string, args ...interface{})
-	Warnj(j log.JSON)
-	Error(i ...interface{})
-	Errorf(format string, args ...interface{})
-	Errorj(j log.JSON)
-	Fatal(i ...interface{})
-	Fatalj(j log.JSON)
-	Fatalf(format string, args ...interface{})
-	Panic(i ...interface{})
-	Panicj(j log.JSON)
-	Panicf(format string, args ...interface{})
+	Debug(msg string, args ...any)
+	Info(msg string, args ...any)
+	Warn(msg string, args ...any)
+	Error(msg string, args ...any)
+	With(args ...any) Logger
+}
+
+type LoggerWriter struct {
+	Logger Logger
+}
+
+func (w *LoggerWriter) Write(b []byte) (int, error) {
+	if w.Logger != nil {
+		w.Logger.Error(string(b))
+	}
+	return len(b), nil
+}
+
+func (e *Echo) SetLogger(logger Logger) {
+	e.Logger = logger
+	e.StdLogger = log.New(&LoggerWriter{logger}, "echo: ", 0)
+}
+
+type SlogLogger struct {
+	Logger *slog.Logger
+}
+
+func (l *SlogLogger) Debug(msg string, args ...any) {
+	if l.Logger != nil {
+		l.Logger.Debug(msg, args...)
+		return
+	}
+	slog.Debug(msg, args...)
+}
+
+func (l *SlogLogger) Info(msg string, args ...any) {
+	if l.Logger != nil {
+		l.Logger.Info(msg, args...)
+		return
+	}
+	slog.Info(msg, args...)
+}
+
+func (l *SlogLogger) Warn(msg string, args ...any) {
+	if l.Logger != nil {
+		l.Logger.Warn(msg, args...)
+		return
+	}
+	slog.Warn(msg, args...)
+}
+
+func (l *SlogLogger) Error(msg string, args ...any) {
+	if l.Logger != nil {
+		l.Logger.Error(msg, args...)
+		return
+	}
+	slog.Error(msg, args...)
+}
+
+func (l *SlogLogger) With(args ...any) Logger {
+	if l.Logger != nil {
+		return &SlogLogger{Logger: l.Logger.With(args...)}
+	}
+	return &SlogLogger{slog.With(args...)}
 }
