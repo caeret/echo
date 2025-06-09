@@ -7,19 +7,20 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/gommon/log"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRecover(t *testing.T) {
 	e := echo.New()
 	buf := new(bytes.Buffer)
-	e.Logger.SetOutput(buf)
+	//e.Logger.SetOutput(buf)
+	e.SetLogger(&echo.SlogLogger{slog.New(slog.NewTextHandler(buf, nil))})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
@@ -35,7 +36,8 @@ func TestRecover(t *testing.T) {
 func TestRecoverErrAbortHandler(t *testing.T) {
 	e := echo.New()
 	buf := new(bytes.Buffer)
-	e.Logger.SetOutput(buf)
+	//e.Logger.SetOutput(buf)
+	e.SetLogger(&echo.SlogLogger{slog.New(slog.NewTextHandler(buf, nil))})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
@@ -61,67 +63,13 @@ func TestRecoverErrAbortHandler(t *testing.T) {
 	assert.NotContains(t, buf.String(), "PANIC RECOVER")
 }
 
-func TestRecoverWithConfig_LogLevel(t *testing.T) {
-	tests := []struct {
-		logLevel  log.Lvl
-		levelName string
-	}{{
-		logLevel:  log.DEBUG,
-		levelName: "DEBUG",
-	}, {
-		logLevel:  log.INFO,
-		levelName: "INFO",
-	}, {
-		logLevel:  log.WARN,
-		levelName: "WARN",
-	}, {
-		logLevel:  log.ERROR,
-		levelName: "ERROR",
-	}, {
-		logLevel:  log.OFF,
-		levelName: "OFF",
-	}}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.levelName, func(t *testing.T) {
-			e := echo.New()
-			e.Logger.SetLevel(log.DEBUG)
-
-			buf := new(bytes.Buffer)
-			e.Logger.SetOutput(buf)
-
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
-			rec := httptest.NewRecorder()
-			c := e.NewContext(req, rec)
-
-			config := DefaultRecoverConfig
-			config.LogLevel = tt.logLevel
-			h := RecoverWithConfig(config)(echo.HandlerFunc(func(c echo.Context) error {
-				panic("test")
-			}))
-
-			h(c)
-
-			assert.Equal(t, http.StatusInternalServerError, rec.Code)
-
-			output := buf.String()
-			if tt.logLevel == log.OFF {
-				assert.Empty(t, output)
-			} else {
-				assert.Contains(t, output, "PANIC RECOVER")
-				assert.Contains(t, output, fmt.Sprintf(`"level":"%s"`, tt.levelName))
-			}
-		})
-	}
-}
-
 func TestRecoverWithConfig_LogErrorFunc(t *testing.T) {
 	e := echo.New()
-	e.Logger.SetLevel(log.DEBUG)
+	//e.Logger.SetLevel(log.DEBUG)
 
 	buf := new(bytes.Buffer)
-	e.Logger.SetOutput(buf)
+	//e.Logger.SetOutput(buf)
+	e.SetLogger(&echo.SlogLogger{slog.New(slog.NewTextHandler(buf, &slog.HandlerOptions{Level: slog.LevelDebug}))})
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
@@ -150,7 +98,7 @@ func TestRecoverWithConfig_LogErrorFunc(t *testing.T) {
 
 		output := buf.String()
 		assert.Contains(t, output, "PANIC RECOVER")
-		assert.Contains(t, output, `"level":"DEBUG"`)
+		assert.Contains(t, output, `DEBUG`)
 	})
 
 	t.Run("else branch case for LogErrorFunc", func(t *testing.T) {
@@ -164,14 +112,15 @@ func TestRecoverWithConfig_LogErrorFunc(t *testing.T) {
 
 		output := buf.String()
 		assert.Contains(t, output, "PANIC RECOVER")
-		assert.Contains(t, output, `"level":"ERROR"`)
+		assert.Contains(t, output, `ERROR`)
 	})
 }
 
 func TestRecoverWithDisabled_ErrorHandler(t *testing.T) {
 	e := echo.New()
 	buf := new(bytes.Buffer)
-	e.Logger.SetOutput(buf)
+	//e.Logger.SetOutput(buf)
+	e.SetLogger(&echo.SlogLogger{slog.New(slog.NewTextHandler(buf, nil))})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)

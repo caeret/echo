@@ -9,7 +9,6 @@ import (
 	"runtime"
 
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/gommon/log"
 )
 
 // LogErrorFunc defines a function for custom logging in the middleware.
@@ -33,10 +32,6 @@ type RecoverConfig struct {
 	// Optional. Default value as false.
 	DisablePrintStack bool `yaml:"disable_print_stack"`
 
-	// LogLevel is log level to printing stack trace.
-	// Optional. Default value 0 (Print).
-	LogLevel log.Lvl
-
 	// LogErrorFunc defines a function for custom logging in the middleware.
 	// If it's set you don't need to provide LogLevel for config.
 	// If this function returns nil, the centralized HTTPErrorHandler will not be called.
@@ -54,7 +49,6 @@ var DefaultRecoverConfig = RecoverConfig{
 	StackSize:           4 << 10, // 4 KB
 	DisableStackAll:     false,
 	DisablePrintStack:   false,
-	LogLevel:            0,
 	LogErrorFunc:        nil,
 	DisableErrorHandler: false,
 }
@@ -103,21 +97,8 @@ func RecoverWithConfig(config RecoverConfig) echo.MiddlewareFunc {
 					if config.LogErrorFunc != nil {
 						err = config.LogErrorFunc(c, err, stack)
 					} else if !config.DisablePrintStack {
-						msg := fmt.Sprintf("[PANIC RECOVER] %v %s\n", err, stack[:length])
-						switch config.LogLevel {
-						case log.DEBUG:
-							c.Logger().Debug(msg)
-						case log.INFO:
-							c.Logger().Info(msg)
-						case log.WARN:
-							c.Logger().Warn(msg)
-						case log.ERROR:
-							c.Logger().Error(msg)
-						case log.OFF:
-							// None.
-						default:
-							c.Logger().Print(msg)
-						}
+						msg := fmt.Sprintf("[PANIC RECOVER] %v %s", err, stack[:length])
+						c.Logger().Error(msg)
 					}
 
 					if err != nil && !config.DisableErrorHandler {

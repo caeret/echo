@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -346,7 +347,7 @@ func TestTimeoutWithFullEchoStack(t *testing.T) {
 			expectResponse:       "{\"message\":\"Not Found\"}\n",
 			expectStatusCode:     http.StatusNotFound,
 			expectLogNotContains: []string{"echo:http: superfluous response.WriteHeader call from"},
-			expectLogContains:    []string{`"status":404,"error":"code=404, message=Not Found"`},
+			expectLogContains:    []string{`\"status\":404,\"error\":\"code=404, message=Not Found\"`},
 		},
 		{
 			name:                 "418 - write response in handler",
@@ -354,7 +355,7 @@ func TestTimeoutWithFullEchoStack(t *testing.T) {
 			expectResponse:       "{\"message\":\"OK\"}\n",
 			expectStatusCode:     http.StatusTeapot,
 			expectLogNotContains: []string{"echo:http: superfluous response.WriteHeader call from"},
-			expectLogContains:    []string{`"status":418,"error":"",`},
+			expectLogContains:    []string{`\"status\":418,\"error\":\"\",`},
 		},
 		{
 			name:                    "503 - handler timeouts, write response in timeout middleware",
@@ -374,7 +375,8 @@ func TestTimeoutWithFullEchoStack(t *testing.T) {
 			e := echo.New()
 
 			buf := new(coroutineSafeBuffer)
-			e.Logger.SetOutput(buf)
+			//e.Logger.SetOutput(buf)
+			e.SetLogger(&echo.SlogLogger{Logger: slog.New(slog.NewTextHandler(buf, nil))})
 
 			// NOTE: timeout middleware is first as it changes Response.Writer and causes data race for logger middleware if it is not first
 			e.Use(TimeoutWithConfig(TimeoutConfig{
@@ -473,7 +475,7 @@ func startServer(e *echo.Echo) (*http.Server, string, error) {
 
 	s := http.Server{
 		Handler:  e,
-		ErrorLog: log.New(e.Logger.Output(), "echo:", 0),
+		ErrorLog: log.New(&echo.LoggerWriter{e.Logger}, "echo:", 0),
 	}
 
 	errCh := make(chan error)

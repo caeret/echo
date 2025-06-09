@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/gommon/color"
 	"github.com/valyala/fasttemplate"
 )
 
@@ -70,7 +69,6 @@ type LoggerConfig struct {
 	Output io.Writer
 
 	template *fasttemplate.Template
-	colorer  *color.Color
 	pool     *sync.Pool
 }
 
@@ -82,7 +80,6 @@ var DefaultLoggerConfig = LoggerConfig{
 		`"status":${status},"error":"${error}","latency":${latency},"latency_human":"${latency_human}"` +
 		`,"bytes_in":${bytes_in},"bytes_out":${bytes_out}}` + "\n",
 	CustomTimeFormat: "2006-01-02 15:04:05.00000",
-	colorer:          color.New(),
 }
 
 // Logger returns a middleware that logs HTTP requests.
@@ -105,8 +102,6 @@ func LoggerWithConfig(config LoggerConfig) echo.MiddlewareFunc {
 	}
 
 	config.template = fasttemplate.New(config.Format, "${", "}")
-	config.colorer = color.New()
-	config.colorer.SetOutput(config.Output)
 	config.pool = &sync.Pool{
 		New: func() interface{} {
 			return bytes.NewBuffer(make([]byte, 256))
@@ -183,15 +178,7 @@ func LoggerWithConfig(config LoggerConfig) echo.MiddlewareFunc {
 					return buf.WriteString(req.UserAgent())
 				case "status":
 					n := res.Status
-					s := config.colorer.Green(n)
-					switch {
-					case n >= 500:
-						s = config.colorer.Red(n)
-					case n >= 400:
-						s = config.colorer.Yellow(n)
-					case n >= 300:
-						s = config.colorer.Cyan(n)
-					}
+					s := strconv.Itoa(n)
 					return buf.WriteString(s)
 				case "error":
 					if err != nil {
@@ -234,7 +221,7 @@ func LoggerWithConfig(config LoggerConfig) echo.MiddlewareFunc {
 			}
 
 			if config.Output == nil {
-				_, err = c.Logger().Output().Write(buf.Bytes())
+				c.Logger().Info(buf.String())
 				return
 			}
 			_, err = config.Output.Write(buf.Bytes())

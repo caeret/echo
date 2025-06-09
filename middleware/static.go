@@ -14,7 +14,8 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/gommon/bytes"
+	"github.com/labstack/echo/v4/internal/bytes"
+	//"github.com/labstack/gommon/bytes"
 )
 
 // StaticConfig defines the config for Static middleware.
