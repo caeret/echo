@@ -54,8 +54,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/labstack/gommon/color"
-	"github.com/labstack/gommon/log"
+	//"github.com/labstack/gommon/color"
+	//"github.com/labstack/gommon/log"
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 	"golang.org/x/net/http2"
@@ -73,7 +73,7 @@ type Echo struct {
 	// startupMutex is mutex to lock Echo instance access during server configuration and startup. Useful for to get
 	// listener address info (on which interface/port was listener bound) without having data races.
 	startupMutex sync.RWMutex
-	colorer      *color.Color
+	//colorer      *color.Color
 
 	// premiddleware are middlewares that are run before routing is done. In case a pre-middleware returns
 	// an error the router is not executed and the request will end up in the global error handler.
@@ -366,8 +366,8 @@ func New() (e *Echo) {
 		AutoTLSManager: autocert.Manager{
 			Prompt: autocert.AcceptTOS,
 		},
-		Logger:          log.New("echo"),
-		colorer:         color.New(),
+		//Logger:          log.New("echo"),
+		//colorer:         color.New(),
 		maxParam:        new(int),
 		ListenerNetwork: "tcp",
 	}
@@ -376,8 +376,9 @@ func New() (e *Echo) {
 	e.HTTPErrorHandler = e.DefaultHTTPErrorHandler
 	e.Binder = &DefaultBinder{}
 	e.JSONSerializer = &DefaultJSONSerializer{}
-	e.Logger.SetLevel(log.ERROR)
-	e.StdLogger = stdLog.New(e.Logger.Output(), e.Logger.Prefix()+": ", 0)
+	//e.Logger.SetLevel(log.ERROR)
+	//e.StdLogger = stdLog.New(e.Logger.Output(), e.Logger.Prefix()+": ", 0)
+	e.SetLogger(new(SlogLogger))
 	e.pool.New = func() interface{} {
 		return e.NewContext(nil, nil)
 	}
@@ -459,7 +460,8 @@ func (e *Echo) DefaultHTTPErrorHandler(err error, c Context) {
 		err = c.JSON(code, message)
 	}
 	if err != nil {
-		e.Logger.Error(err)
+		//e.Logger.Error(err)
+		e.Logger.Error(fmt.Sprintf("%v", err))
 	}
 }
 
@@ -772,15 +774,15 @@ func (e *Echo) StartServer(s *http.Server) (err error) {
 
 func (e *Echo) configureServer(s *http.Server) error {
 	// Setup
-	e.colorer.SetOutput(e.Logger.Output())
+	//e.colorer.SetOutput(e.Logger.Output())
 	s.ErrorLog = e.StdLogger
 	s.Handler = e
-	if e.Debug {
-		e.Logger.SetLevel(log.DEBUG)
-	}
+	//if e.Debug {
+	//	e.Logger.SetLevel(log.DEBUG)
+	//}
 
 	if !e.HideBanner {
-		e.colorer.Printf(banner, e.colorer.Red("v"+Version), e.colorer.Blue(website))
+		//e.colorer.Printf(banner, e.colorer.Red("v"+Version), e.colorer.Blue(website))
 	}
 
 	if s.TLSConfig == nil {
@@ -792,7 +794,8 @@ func (e *Echo) configureServer(s *http.Server) error {
 			e.Listener = l
 		}
 		if !e.HidePort {
-			e.colorer.Printf("⇨ http server started on %s\n", e.colorer.Green(e.Listener.Addr()))
+			//e.colorer.Printf("⇨ http server started on %s\n", e.colorer.Green(e.Listener.Addr()))
+			e.Logger.Info(fmt.Sprintf("⇨ http server started on %s", e.Listener.Addr()))
 		}
 		return nil
 	}
@@ -804,7 +807,8 @@ func (e *Echo) configureServer(s *http.Server) error {
 		e.TLSListener = tls.NewListener(l, s.TLSConfig)
 	}
 	if !e.HidePort {
-		e.colorer.Printf("⇨ https server started on %s\n", e.colorer.Green(e.TLSListener.Addr()))
+		//e.colorer.Printf("⇨ https server started on %s\n", e.colorer.Green(e.TLSListener.Addr()))
+		e.Logger.Info(fmt.Sprintf("⇨ https server started on %s", e.TLSListener.Addr()))
 	}
 	return nil
 }
@@ -835,15 +839,15 @@ func (e *Echo) StartH2CServer(address string, h2s *http2.Server) error {
 	// Setup
 	s := e.Server
 	s.Addr = address
-	e.colorer.SetOutput(e.Logger.Output())
+	//e.colorer.SetOutput(e.Logger.Output())
 	s.ErrorLog = e.StdLogger
 	s.Handler = h2c.NewHandler(e, h2s)
-	if e.Debug {
-		e.Logger.SetLevel(log.DEBUG)
-	}
+	//if e.Debug {
+	//	e.Logger.SetLevel(log.DEBUG)
+	//}
 
 	if !e.HideBanner {
-		e.colorer.Printf(banner, e.colorer.Red("v"+Version), e.colorer.Blue(website))
+		//e.colorer.Printf(banner, e.colorer.Red("v"+Version), e.colorer.Blue(website))
 	}
 
 	if e.Listener == nil {
@@ -855,7 +859,8 @@ func (e *Echo) StartH2CServer(address string, h2s *http2.Server) error {
 		e.Listener = l
 	}
 	if !e.HidePort {
-		e.colorer.Printf("⇨ http server started on %s\n", e.colorer.Green(e.Listener.Addr()))
+		//e.colorer.Printf("⇨ http server started on %s\n", e.colorer.Green(e.Listener.Addr()))
+		e.Logger.Info(fmt.Sprintf("⇨ http server started on %s", e.Listener.Addr()))
 	}
 	e.startupMutex.Unlock()
 	return s.Serve(e.Listener)

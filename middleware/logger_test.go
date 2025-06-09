@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -65,7 +66,8 @@ func TestLoggerIPAddress(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	buf := new(bytes.Buffer)
-	e.Logger.SetOutput(buf)
+	//e.Logger.SetOutput(buf)
+	e.SetLogger(&echo.SlogLogger{slog.New(slog.NewTextHandler(buf, nil))})
 	ip := "127.0.0.1"
 	h := Logger()(func(c echo.Context) error {
 		return c.String(http.StatusOK, "test")

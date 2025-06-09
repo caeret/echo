@@ -9,7 +9,8 @@ import (
 	"sync"
 
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/gommon/bytes"
+	"github.com/labstack/echo/v4/internal/bytes"
+	//"github.com/labstack/gommon/bytes"
 )
 
 // BodyLimitConfig defines the config for BodyLimit middleware.
